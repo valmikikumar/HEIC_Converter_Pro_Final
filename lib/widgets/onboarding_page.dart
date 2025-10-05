@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../utils/app_theme.dart';
-import '../screens/onboarding_screen.dart';
+import 'onboarding_screen.dart';
 
 class OnboardingPage extends StatelessWidget {
   final OnboardingData data;

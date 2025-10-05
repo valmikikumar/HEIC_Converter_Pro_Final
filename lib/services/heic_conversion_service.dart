@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
-// Removed heic_to_jpg dependency; decode HEIC directly via image library fallback when available
+import 'package:heic_to_jpg/heic_to_jpg.dart';
 import 'package:image/image.dart' as img;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -137,8 +137,14 @@ class HEICConversionService {
     Map<String, double>? cropArea,
   ) async {
     try {
-      // Read input bytes (HEIC/HEIF supported on some environments via image package; otherwise, this may fail)
-      final bytes = await File(inputPath).readAsBytes();
+      // First convert HEIC to JPG using the native library
+      final jpgPath = await HeicToJpg.convert(inputPath);
+      if (jpgPath == null) {
+        throw Exception('Failed to convert HEIC to JPG');
+      }
+
+      final jpgFile = File(jpgPath);
+      final bytes = jpgFile.readAsBytesSync();
       
       // Decode the image
       final image = img.decodeImage(bytes);
@@ -195,7 +201,10 @@ class HEICConversionService {
       final outputFile = File(outputPath);
       await outputFile.writeAsBytes(outputBytes);
 
-      // No temp cleanup needed
+      // Clean up temporary JPG file
+      if (jpgFile.existsSync()) {
+        await jpgFile.delete();
+      }
 
       return outputFile;
     } catch (e) {
@@ -211,8 +220,14 @@ class HEICConversionService {
     double resizePercentage,
   ) async {
     try {
-      // Read input bytes directly
-      final bytes = await File(inputPath).readAsBytes();
+      // Convert to JPG first
+      final jpgPath = await HeicToJpg.convert(inputPath);
+      if (jpgPath == null) {
+        throw Exception('Failed to convert HEIC to JPG');
+      }
+
+      final jpgFile = File(jpgPath);
+      final bytes = jpgFile.readAsBytesSync();
       
       // Decode and resize image
       final image = img.decodeImage(bytes);
@@ -250,7 +265,10 @@ class HEICConversionService {
       final outputFile = File(outputPath);
       await outputFile.writeAsBytes(await pdf.save());
 
-      // No temp cleanup needed
+      // Clean up temporary JPG file
+      if (jpgFile.existsSync()) {
+        await jpgFile.delete();
+      }
 
       return outputFile;
     } catch (e) {
