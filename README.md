@@ -1,6 +1,6 @@
 # 📱 HEIC Converter Pro
 
-Professional HEIC to JPG/PNG/PDF conversion app with batch processing, Firebase authentication, and premium features.
+Professional HEIC to JPG/PNG/PDF conversion app with batch processing, Supabase authentication, and premium features.
 
 ## 🚀 Features
 
@@ -15,10 +15,10 @@ Professional HEIC to JPG/PNG/PDF conversion app with batch processing, Firebase 
 - **Pro Users**: Unlimited conversions, no ads, premium tools
 
 ### ✅ Authentication
-- **Email/Password** login
-- **Google Sign-In** integration
-- **Phone OTP** verification
-- **Cloud Sync** across devices
+- **Email/Password** login with Supabase
+- **Secure authentication** with Row Level Security
+- **User profiles** with automatic creation
+- **Cloud data sync** across devices
 
 ### ✅ UI/UX
 - **Material 3** design system
@@ -28,12 +28,12 @@ Professional HEIC to JPG/PNG/PDF conversion app with batch processing, Firebase 
 
 ## 🛠️ Tech Stack
 
-- **Flutter** 3.16.0
-- **Firebase** (Auth, Firestore, Storage)
-- **AdMob** integration
-- **Google Play Billing**
+- **Flutter** 3.16.0+
+- **Supabase** (Auth, Database, Storage)
+- **PostgreSQL** database with RLS
 - **Riverpod** state management
 - **Material 3** UI components
+- **GoRouter** navigation
 
 ## 📱 Screenshots
 
@@ -48,19 +48,23 @@ Professional HEIC to JPG/PNG/PDF conversion app with batch processing, Firebase 
 
 ### Prerequisites
 - Flutter SDK 3.16.0+
-- Android Studio
-- Firebase project setup
+- Android Studio or Xcode
+- Supabase account
 
-### Installation
+### Quick Setup
 1. Clone the repository
 2. Run `flutter pub get`
-3. Configure Firebase
-4. Run `flutter run`
+3. Set up Supabase (see SETUP_GUIDE.md)
+4. Update configuration in `lib/config/supabase_config.dart`
+5. Run `flutter run`
 
 ### Build APK
 ```bash
 flutter build apk --release
 ```
+
+### Full Documentation
+See **SETUP_GUIDE.md** for complete setup instructions.
 
 ## 📁 Project Structure
 
@@ -80,19 +84,16 @@ lib/
 
 ## 🔧 Configuration
 
-### Firebase Setup
-1. Create Firebase project
-2. Add `google-services.json` to `android/app/`
-3. Update `lib/firebase_options.dart`
+### Supabase Setup
+1. Create Supabase project
+2. Run database migration from `supabase_migration.sql`
+3. Update credentials in `lib/config/supabase_config.dart`
+4. Enable email authentication in Supabase dashboard
 
-### AdMob Setup
-1. Create AdMob account
+### Optional: Monetization
+1. Set up AdMob account
 2. Update Ad Unit IDs in `lib/utils/app_constants.dart`
-
-### Google Play Billing
-1. Setup Google Play Console
-2. Configure product IDs
-3. Test in-app purchases
+3. Configure Google Play Billing product IDs
 
 ## 📱 Build & Deploy
 
@@ -112,10 +113,11 @@ This project automatically builds APK using GitHub Actions:
 - Quality and size optimization
 
 ### User Management
-- Firebase Authentication
+- Supabase Authentication
 - User profiles and settings
 - Pro subscription management
 - Cross-device synchronization
+- Secure data with Row Level Security
 
 ### Monetization
 - AdMob banner and interstitial ads
@@ -128,8 +130,9 @@ This project automatically builds APK using GitHub Actions:
 This app is production-ready with:
 - ✅ Complete feature implementation
 - ✅ Professional UI/UX design
-- ✅ Firebase integration
-- ✅ Monetization setup
+- ✅ Supabase integration with secure database
+- ✅ Row Level Security policies
+- ✅ Monetization setup ready
 - ✅ Error handling
 - ✅ Performance optimization
 
