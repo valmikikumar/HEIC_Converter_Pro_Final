@@ -1,19 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'services/supabase_service.dart';
-import 'screens/auth/splash_screen.dart';
-import 'screens/auth/login_screen.dart';
-import 'screens/auth/signup_screen.dart';
+import 'services/purchase_service.dart';
 import 'screens/home/home_screen.dart';
-import 'screens/conversion/conversion_screen.dart';
-import 'screens/profile/profile_screen.dart';
-import 'screens/settings/settings_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await SupabaseService.initialize();
+  await PurchaseService.initialize();
   runApp(const ProviderScope(child: MyApp()));
 }
 
@@ -22,41 +15,7 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final router = GoRouter(
-      initialLocation: '/splash',
-      routes: [
-        GoRoute(
-          path: '/splash',
-          builder: (context, state) => const SplashScreen(),
-        ),
-        GoRoute(
-          path: '/login',
-          builder: (context, state) => const LoginScreen(),
-        ),
-        GoRoute(
-          path: '/signup',
-          builder: (context, state) => const SignupScreen(),
-        ),
-        GoRoute(
-          path: '/home',
-          builder: (context, state) => const HomeScreen(),
-        ),
-        GoRoute(
-          path: '/conversion',
-          builder: (context, state) => const ConversionScreen(),
-        ),
-        GoRoute(
-          path: '/profile',
-          builder: (context, state) => const ProfileScreen(),
-        ),
-        GoRoute(
-          path: '/settings',
-          builder: (context, state) => const SettingsScreen(),
-        ),
-      ],
-    );
-
-    return MaterialApp.router(
+    return MaterialApp(
       title: 'HEIC Converter Pro',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
@@ -66,7 +25,7 @@ class MyApp extends ConsumerWidget {
           brightness: Brightness.light,
         ),
         textTheme: GoogleFonts.robotoTextTheme(),
-        appBarTheme: AppBarTheme(
+        appBarTheme: const AppBarTheme(
           centerTitle: true,
           elevation: 0,
           backgroundColor: Colors.transparent,
@@ -94,7 +53,7 @@ class MyApp extends ConsumerWidget {
           brightness: Brightness.dark,
         ),
         textTheme: GoogleFonts.robotoTextTheme(ThemeData.dark().textTheme),
-        appBarTheme: AppBarTheme(
+        appBarTheme: const AppBarTheme(
           centerTitle: true,
           elevation: 0,
           backgroundColor: Colors.transparent,
@@ -115,7 +74,7 @@ class MyApp extends ConsumerWidget {
         ),
       ),
       themeMode: ThemeMode.system,
-      routerConfig: router,
+      home: const HomeScreen(),
     );
   }
 }

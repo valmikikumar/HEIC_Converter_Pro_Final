@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import '../../services/supabase_service.dart';
-import '../../models/user_settings.dart' as models;
+import '../../services/local_storage_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -11,8 +9,9 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  final _supabase = SupabaseService();
-  models.UserSettings? _settings;
+  String _themeMode = 'system';
+  String _defaultFormat = 'jpg';
+  String _qualityPreset = 'high';
   bool _isLoading = true;
 
   @override
@@ -22,183 +21,145 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadSettings() async {
-    try {
-      final userId = _supabase.currentUser?.id;
-      if (userId == null) return;
+    final theme = await LocalStorageService.getThemeMode();
+    final format = await LocalStorageService.getDefaultFormat();
+    final quality = await LocalStorageService.getQualityPreset();
 
-      final settings = await _supabase.getSettings(userId);
-      if (settings == null) {
-        final newSettings = models.UserSettings(
-          id: '',
-          userId: userId,
-          themeMode: models.ThemeMode.system,
-          defaultOutputFormat: 'jpg',
-          qualityPreset: 'high',
-          autoDeleteAfterConversion: false,
-          showAds: true,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        );
-        await _supabase.createSettings(newSettings);
-        setState(() {
-          _settings = newSettings;
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _settings = settings;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      setState(() => _isLoading = false);
+    setState(() {
+      _themeMode = theme;
+      _defaultFormat = format;
+      _qualityPreset = quality;
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _updateTheme(String theme) async {
+    await LocalStorageService.setThemeMode(theme);
+    setState(() => _themeMode = theme);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Theme updated'),
+          backgroundColor: Colors.green,
+        ),
+      );
     }
   }
 
-  Future<void> _updateSettings(models.UserSettings settings) async {
-    try {
-      await _supabase.updateSettings(settings);
-      setState(() => _settings = settings);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Settings saved'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to save settings: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+  Future<void> _updateFormat(String format) async {
+    await LocalStorageService.setDefaultFormat(format);
+    setState(() => _defaultFormat = format);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Default format updated'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
+  Future<void> _updateQuality(String quality) async {
+    await LocalStorageService.setQualityPreset(quality);
+    setState(() => _qualityPreset = quality);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Quality preset updated'),
+          backgroundColor: Colors.green,
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text(
+          'Appearance',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.primary,
+              ),
         ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text(
-            'Appearance',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+        const SizedBox(height: 8),
+        Card(
+          child: Column(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.brightness_6),
+                title: const Text('Theme'),
+                subtitle: Text(_themeMode.toUpperCase()),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _showThemeDialog(),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.brightness_6),
-                  title: const Text('Theme'),
-                  subtitle: Text(_settings?.themeMode.name.toUpperCase() ?? 'SYSTEM'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _showThemeDialog(),
-                ),
-              ],
-            ),
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'Conversion Settings',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+        ),
+        const SizedBox(height: 8),
+        Card(
+          child: Column(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.image),
+                title: const Text('Default Output Format'),
+                subtitle: Text(_defaultFormat.toUpperCase()),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _showFormatDialog(),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.high_quality),
+                title: const Text('Default Quality'),
+                subtitle: Text(_qualityPreset.toUpperCase()),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _showQualityDialog(),
+              ),
+            ],
           ),
-          const SizedBox(height: 24),
-          Text(
-            'Conversion Settings',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'About',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+        ),
+        const SizedBox(height: 8),
+        Card(
+          child: Column(
+            children: [
+              const ListTile(
+                leading: Icon(Icons.info),
+                title: Text('Version'),
+                trailing: Text('1.0.0'),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.delete_forever),
+                title: const Text('Reset App Data'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _showResetDialog(),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.image),
-                  title: const Text('Default Output Format'),
-                  subtitle: Text(_settings?.defaultOutputFormat.toUpperCase() ?? 'JPG'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _showFormatDialog(),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.high_quality),
-                  title: const Text('Default Quality'),
-                  subtitle: Text(_settings?.qualityPreset.toUpperCase() ?? 'HIGH'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _showQualityDialog(),
-                ),
-                const Divider(height: 1),
-                SwitchListTile(
-                  secondary: const Icon(Icons.delete_sweep),
-                  title: const Text('Auto-delete after conversion'),
-                  subtitle: const Text('Delete original files after successful conversion'),
-                  value: _settings?.autoDeleteAfterConversion ?? false,
-                  onChanged: (value) {
-                    if (_settings != null) {
-                      _updateSettings(_settings!.copyWith(
-                        autoDeleteAfterConversion: value,
-                      ));
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'About',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-          ),
-          const SizedBox(height: 8),
-          Card(
-            child: Column(
-              children: [
-                const ListTile(
-                  leading: Icon(Icons.info),
-                  title: Text('Version'),
-                  trailing: Text('1.0.0'),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.privacy_tip),
-                  title: const Text('Privacy Policy'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {},
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.description),
-                  title: const Text('Terms of Service'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {},
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -210,35 +171,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            RadioListTile<models.ThemeMode>(
+            RadioListTile<String>(
               title: const Text('Light'),
-              value: models.ThemeMode.light,
-              groupValue: _settings?.themeMode,
+              value: 'light',
+              groupValue: _themeMode,
               onChanged: (value) {
-                if (value != null && _settings != null) {
-                  _updateSettings(_settings!.copyWith(themeMode: value));
+                if (value != null) {
+                  _updateTheme(value);
                   Navigator.pop(context);
                 }
               },
             ),
-            RadioListTile<models.ThemeMode>(
+            RadioListTile<String>(
               title: const Text('Dark'),
-              value: models.ThemeMode.dark,
-              groupValue: _settings?.themeMode,
+              value: 'dark',
+              groupValue: _themeMode,
               onChanged: (value) {
-                if (value != null && _settings != null) {
-                  _updateSettings(_settings!.copyWith(themeMode: value));
+                if (value != null) {
+                  _updateTheme(value);
                   Navigator.pop(context);
                 }
               },
             ),
-            RadioListTile<models.ThemeMode>(
+            RadioListTile<String>(
               title: const Text('System'),
-              value: models.ThemeMode.system,
-              groupValue: _settings?.themeMode,
+              value: 'system',
+              groupValue: _themeMode,
               onChanged: (value) {
-                if (value != null && _settings != null) {
-                  _updateSettings(_settings!.copyWith(themeMode: value));
+                if (value != null) {
+                  _updateTheme(value);
                   Navigator.pop(context);
                 }
               },
@@ -260,10 +221,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             RadioListTile<String>(
               title: const Text('JPG'),
               value: 'jpg',
-              groupValue: _settings?.defaultOutputFormat,
+              groupValue: _defaultFormat,
               onChanged: (value) {
-                if (value != null && _settings != null) {
-                  _updateSettings(_settings!.copyWith(defaultOutputFormat: value));
+                if (value != null) {
+                  _updateFormat(value);
                   Navigator.pop(context);
                 }
               },
@@ -271,10 +232,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             RadioListTile<String>(
               title: const Text('PNG'),
               value: 'png',
-              groupValue: _settings?.defaultOutputFormat,
+              groupValue: _defaultFormat,
               onChanged: (value) {
-                if (value != null && _settings != null) {
-                  _updateSettings(_settings!.copyWith(defaultOutputFormat: value));
+                if (value != null) {
+                  _updateFormat(value);
                   Navigator.pop(context);
                 }
               },
@@ -282,10 +243,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             RadioListTile<String>(
               title: const Text('PDF'),
               value: 'pdf',
-              groupValue: _settings?.defaultOutputFormat,
+              groupValue: _defaultFormat,
               onChanged: (value) {
-                if (value != null && _settings != null) {
-                  _updateSettings(_settings!.copyWith(defaultOutputFormat: value));
+                if (value != null) {
+                  _updateFormat(value);
                   Navigator.pop(context);
                 }
               },
@@ -308,10 +269,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: const Text('High'),
               subtitle: const Text('Best quality, larger file size'),
               value: 'high',
-              groupValue: _settings?.qualityPreset,
+              groupValue: _qualityPreset,
               onChanged: (value) {
-                if (value != null && _settings != null) {
-                  _updateSettings(_settings!.copyWith(qualityPreset: value));
+                if (value != null) {
+                  _updateQuality(value);
                   Navigator.pop(context);
                 }
               },
@@ -320,10 +281,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: const Text('Medium'),
               subtitle: const Text('Balanced quality and size'),
               value: 'medium',
-              groupValue: _settings?.qualityPreset,
+              groupValue: _qualityPreset,
               onChanged: (value) {
-                if (value != null && _settings != null) {
-                  _updateSettings(_settings!.copyWith(qualityPreset: value));
+                if (value != null) {
+                  _updateQuality(value);
                   Navigator.pop(context);
                 }
               },
@@ -332,16 +293,53 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: const Text('Low'),
               subtitle: const Text('Smaller file size, lower quality'),
               value: 'low',
-              groupValue: _settings?.qualityPreset,
+              groupValue: _qualityPreset,
               onChanged: (value) {
-                if (value != null && _settings != null) {
-                  _updateSettings(_settings!.copyWith(qualityPreset: value));
+                if (value != null) {
+                  _updateQuality(value);
                   Navigator.pop(context);
                 }
               },
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showResetDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset App Data'),
+        content: const Text(
+          'This will reset all app data including conversion count and Pro status. This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await LocalStorageService.resetAllData();
+              Navigator.pop(context);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('App data reset'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+                _loadSettings();
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('Reset'),
+          ),
+        ],
       ),
     );
   }

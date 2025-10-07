@@ -1,16 +1,15 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../services/conversion_service.dart';
-import '../../services/supabase_service.dart';
-import '../../models/conversion.dart' as models;
-import '../../utils/app_constants.dart';
+import '../../services/local_storage_service.dart';
 
 class ConversionScreen extends StatefulWidget {
-  const ConversionScreen({super.key});
+  final List<PlatformFile>? selectedFiles;
+
+  const ConversionScreen({super.key, this.selectedFiles});
 
   @override
   State<ConversionScreen> createState() => _ConversionScreenState();
@@ -18,7 +17,6 @@ class ConversionScreen extends StatefulWidget {
 
 class _ConversionScreenState extends State<ConversionScreen> {
   final _conversionService = ConversionService();
-  final _supabase = SupabaseService();
 
   List<PlatformFile>? _selectedFiles;
   String _outputFormat = 'jpg';
@@ -26,6 +24,12 @@ class _ConversionScreenState extends State<ConversionScreen> {
   bool _isConverting = false;
   double _progress = 0.0;
   List<ConversionResult> _results = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedFiles = widget.selectedFiles;
+  }
 
   Future<void> _startConversion() async {
     if (_selectedFiles == null || _selectedFiles!.isEmpty) {
@@ -64,13 +68,14 @@ class _ConversionScreenState extends State<ConversionScreen> {
       });
 
       for (var result in results.where((r) => r.isSuccess)) {
-        await _saveConversionToDatabase(result);
+        await LocalStorageService.incrementConversionCount();
       }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Converted ${results.where((r) => r.isSuccess).length} files successfully'),
+            content: Text(
+                'Converted ${results.where((r) => r.isSuccess).length} files successfully'),
             backgroundColor: Colors.green,
           ),
         );
@@ -85,37 +90,6 @@ class _ConversionScreenState extends State<ConversionScreen> {
           ),
         );
       }
-    }
-  }
-
-  Future<void> _saveConversionToDatabase(ConversionResult result) async {
-    try {
-      final userId = _supabase.currentUser?.id;
-      if (userId == null) return;
-
-      final conversion = models.Conversion(
-        id: '',
-        userId: userId,
-        originalFilename: result.inputPath?.split('/').last ?? 'unknown',
-        originalSize: result.inputSize,
-        outputFormat: _outputFormat,
-        outputFilename: result.outputFilename,
-        outputSize: result.outputSize,
-        status: models.ConversionStatus.completed,
-        createdAt: DateTime.now(),
-        completedAt: DateTime.now(),
-      );
-
-      await _supabase.createConversion(conversion);
-
-      final profile = await _supabase.getProfile(userId);
-      if (profile != null) {
-        await _supabase.updateProfile(
-          profile.copyWith(conversionCount: profile.conversionCount + 1),
-        );
-      }
-    } catch (e) {
-      debugPrint('Error saving conversion: $e');
     }
   }
 
@@ -173,10 +147,6 @@ class _ConversionScreenState extends State<ConversionScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Convert Files'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -191,10 +161,31 @@ class _ConversionScreenState extends State<ConversionScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
+                        'Selected Files',
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text('${_selectedFiles?.length ?? 0} files selected'),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
                         'Output Format',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                       ),
                       const SizedBox(height: 16),
                       SegmentedButton<String>(
@@ -223,15 +214,17 @@ class _ConversionScreenState extends State<ConversionScreen> {
                     children: [
                       Text(
                         'Quality',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                       ),
                       const SizedBox(height: 16),
                       SegmentedButton<String>(
                         segments: const [
                           ButtonSegment(value: 'high', label: Text('High')),
-                          ButtonSegment(value: 'medium', label: Text('Medium')),
+                          ButtonSegment(
+                              value: 'medium', label: Text('Medium')),
                           ButtonSegment(value: 'low', label: Text('Low')),
                         ],
                         selected: {_qualityPreset},
